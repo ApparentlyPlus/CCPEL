@@ -62,91 +62,116 @@ Table symbolTable;
 
 %%
 
+// A program starts with "start", followed by statements, and ends with "end"
 program: "start" T_ID { pre($2); symbolTable = NULL; } stmts "end" { fin(); }
     ;
 
+// One or more statements
 stmts: /* e */
     | stmts stmt
     ;
 
+// A statement can be a variable declaration, assignment, or print statement
 stmt: '(' T_INT T_ID ')' {
+        // Declare an integer variable and add it to the symbol table
         if (!add(&symbolTable, $3, type_integer)) {
             ERR_VAR_DECL($3, ll);
         }
     }
     | '(' T_FLT T_ID ')' {
+        // Declare a float variable and add it to the symbol table
         if (!add(&symbolTable, $3, type_real)) {
             ERR_VAR_DECL($3, ll);
         }
     }
     | '(' '=' T_ID expr ')' {
+        // Assign the value and type of an expression to a variable
         asn($3, $4.place, $4.type);
     }
     | '(' T_PRINT expr ')' {
+        // Print the value of the evaluated expression
         print($3.place, $3.type);
     }
     ;
 
+// Expressions include constants, identifiers, prefix operators, increments, and conditionals
 expr: T_INTVAL {
+        // load an integer literal constant
         $$.place = ldc($1, &$$.type);
     }
     | T_FLTVAL {
+        // load a float literal constant
         $$.place = ldc($1, &$$.type);
     }
     | T_ID {
+        // load the value of a variable identifier
         $$.place = lod($1, &$$.type);
     }
     | '+' expr {
+        // prefix Addition: push left-hand side onto stack if in a primary register to prevent overwrite
         if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
             $2.place = push($2.type, $2.place);
         }
         $<se>$ = $2;
     } expr {
+        // generate addition code for both operands
         $$.place = op("+", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
     }
     | '-' expr {
+        // push left hand side onto stack if in a primary register to prevent overwrite
         if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
             $2.place = push($2.type, $2.place);
         }
         $<se>$ = $2;
     } expr {
+        // generate subtraction code for both operands
         $$.place = op("-", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
     }
     | '*' expr {
+        // push left hand side onto stack if in a primary register to prevent overwrite
         if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
             $2.place = push($2.type, $2.place);
         }
         $<se>$ = $2;
     } expr {
+        // generate multiplication code for both operands
         $$.place = op("*", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
     }
     | '/' expr {
+        // push left hand side onto stack if in a primary register to prevent overwrite
         if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
             $2.place = push($2.type, $2.place);
         }
         $<se>$ = $2;
     } expr {
+        // generate division code for both operands
         $$.place = op("/", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
     }
     | '(' expr ')' {
+        // propagate inside expression
         $$ = $2;
     }
     | '(' T_ID T_INC ')' {
+        // Post increment variable
         $$.place = inc($2, 0, &$$.type);
     }
     | '(' T_INC T_ID ')' {
+        // Pre-increment variable
         $$.place = inc($3, 1, &$$.type);
     }
     | '(' relop expr {
+        // Ternary: push condition left hand side onto stack if in a primary register to prevent overwrite
         if (strcmp($3.place, "rax") == 0 || strcmp($3.place, "xmm0") == 0) {
             $3.place = push($3.type, $3.place);
         }
         $<se>$ = $3;
     } expr '?' expr ':' expr ')' {
+        // Generate code for condition evaluation and branch selection
         $$.place = cnd($2, $<se>4.place, $<se>4.type, $5.place, $5.type, $7.place, $7.type, $9.place, $9.type, &$$.type);
     }
     ;
 
+// Relational comparison operators
 relop: '>' { $$ = OP_GT; }
     | '<' { $$ = OP_LT; }
     | T_EQ { $$ = OP_EQ; }
