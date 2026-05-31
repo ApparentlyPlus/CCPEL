@@ -6,15 +6,21 @@
 #include "symtab.h"
 #include "codegen.h"
 
+static int current_stack_value = 1;
+
+void reset_symtab() {
+    current_stack_value = 1;
+}
+
+int get_current_stack_value() {
+    return current_stack_value;
+}
+
 /* Adding a Variable entry to the symbol table.
  Returns TRUE (1) if the variable is successfully added
  and FALSE (0) if the variable was already in the symbol table. */
 int addvar(ST_TABLE_TYPE *symbol_table, char *VariableName,ParType TypeDecl)
 {
-  // Start numbering Variable from 1
-  // Static means it value survives successive calls.
-  static int current_stack_value = 1;
-
 	ST_ENTRY_TYPE *newVar;
 	if (!lookup(*symbol_table,VariableName))
 		{

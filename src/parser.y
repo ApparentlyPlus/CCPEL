@@ -73,11 +73,9 @@ stmt: '(' T_int_type T_id ')' {
       }
     | '(' '=' T_id expr ')' {
          gen_asn($3, $4.place, $4.type);
-         gen_rst();
       }
     | '(' T_print expr ')' {
          gen_prt($3.place, $3.type);
-         gen_rst();
       }
     ;
 
@@ -92,9 +90,7 @@ expr: T_integer {
       }
     | '+' expr {
          if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
-             int temp = gen_nxt();
-             gen_sav($2.type, temp);
-             $2.place = gen_tmp(temp);
+             $2.place = gen_push($2.type, $2.place);
          }
          $<se>$ = $2;
       } expr {
@@ -102,9 +98,7 @@ expr: T_integer {
       }
     | '-' expr {
          if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
-             int temp = gen_nxt();
-             gen_sav($2.type, temp);
-             $2.place = gen_tmp(temp);
+             $2.place = gen_push($2.type, $2.place);
          }
          $<se>$ = $2;
       } expr {
@@ -112,9 +106,7 @@ expr: T_integer {
       }
     | '*' expr {
          if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
-             int temp = gen_nxt();
-             gen_sav($2.type, temp);
-             $2.place = gen_tmp(temp);
+             $2.place = gen_push($2.type, $2.place);
          }
          $<se>$ = $2;
       } expr {
@@ -122,9 +114,7 @@ expr: T_integer {
       }
     | '/' expr {
          if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
-             int temp = gen_nxt();
-             gen_sav($2.type, temp);
-             $2.place = gen_tmp(temp);
+             $2.place = gen_push($2.type, $2.place);
          }
          $<se>$ = $2;
       } expr {
@@ -141,9 +131,7 @@ expr: T_integer {
       }
     | '(' relop expr {
          if (strcmp($3.place, "rax") == 0 || strcmp($3.place, "xmm0") == 0) {
-             int temp = gen_nxt();
-             gen_sav($3.type, temp);
-             $3.place = gen_tmp(temp);
+             $3.place = gen_push($3.type, $3.place);
          }
          $<se>$ = $3;
       } expr '?' expr ':' expr ')' {

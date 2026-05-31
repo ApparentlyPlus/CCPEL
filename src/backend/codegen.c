@@ -9,29 +9,37 @@ extern FILE *yyout;
 extern int yyerror(const char *);
 extern ST_TABLE_TYPE symbolTable;
 
-#define MAX_FLOAT_CONSTANTS 50000
-char *float_constants[MAX_FLOAT_CONSTANTS];
-int float_constant_count = 0;
+static char **float_constants = NULL;
+static int float_constant_count = 0;
+static int float_constant_capacity = 0;
 
-/* Helper to allocate temporary variables in the stack frame starting at index 100 */
-static int current_temp = 100;
-
-int gen_nxt()
-{
-    return current_temp++;
-}
-
-/* Reset temporary variable counter for each new statement */
-void gen_rst()
-{
-    current_temp = 100;
-}
+static int current_label = 1;
 
 char *gen_tmp(int temp_idx)
 {
     char buf[64];
     sprintf(buf, "[rbp - %d]", temp_idx * 8);
     return strdup(buf);
+}
+
+char *gen_push(ParType type, char *place)
+{
+    char buf[256];
+    if (type == type_integer) {
+        if (strcmp(place, "rax") != 0) {
+            sprintf(buf, "    mov rax, %s", place);
+            addInstruction(buf, NO_LABEL);
+        }
+        addInstruction("    push rax", NO_LABEL);
+    } else if (type == type_real) {
+        if (strcmp(place, "xmm0") != 0) {
+            sprintf(buf, "    movsd xmm0, %s", place);
+            addInstruction(buf, NO_LABEL);
+        }
+        addInstruction("    sub rsp, 8", NO_LABEL);
+        addInstruction("    movsd [rsp], xmm0", NO_LABEL);
+    }
+    return "%stack%";
 }
 
 static void gen_cvtsi2sd(char *dest_xmm, char *src_place)
@@ -48,9 +56,6 @@ static void gen_cvtsi2sd(char *dest_xmm, char *src_place)
     }
 }
 
-/* Label Management */
-static int current_label = 1;
-
 int Label()
 {
     return current_label++;
@@ -66,6 +71,19 @@ void insertLabel(int l)
 /* Preamble generation for 64-bit x86_64 */
 void gen_pre(char *progName)
 {
+    reset_symtab();
+    current_label = 1;
+
+    if (float_constants != NULL) {
+        for (int i = 0; i < float_constant_count; i++) {
+            free(float_constants[i]);
+        }
+        free(float_constants);
+        float_constants = NULL;
+    }
+    float_constant_count = 0;
+    float_constant_capacity = 0;
+
     char comment[256];
     sprintf(comment, "; Assembly transpiled for program %s (Transpiler written by u/ApparentlyPlus)", progName);
     addInstruction(comment, NO_LABEL);
@@ -83,7 +101,7 @@ void gen_pre(char *progName)
     addInstruction("main:", NO_LABEL);
     addInstruction("    push rbp", NO_LABEL);
     addInstruction("    mov rbp, rsp", NO_LABEL);
-    addInstruction("    sub rsp, 65536", NO_LABEL); // Expanded space to support up to 8192 variables/temporaries
+    addInstruction("    sub rsp, %STACK_SIZE%", NO_LABEL);
 }
 
 void gen_fin()
@@ -106,6 +124,26 @@ void gen_fin()
     }
     
     addInstruction("section .note.GNU-stack noalloc noexec nowrite progbits", NO_LABEL);
+
+    // Resolve stack size and patch %STACK_SIZE%
+    int num_vars = get_current_stack_value() - 1;
+    int stack_bytes = num_vars * 8;
+    int aligned_size = ((stack_bytes + 15) / 16) * 16;
+    if (aligned_size < 16) {
+        aligned_size = 16; // Minimum 16-byte stack frame
+    }
+    
+    extern INSTRUCTION_TABLE_TYPE INTERCODE;
+    INSTRUCTION_TYPE *curr = INTERCODE;
+    while (curr != NULL) {
+        if (curr->text && strstr(curr->text, "%STACK_SIZE%") != NULL) {
+            char new_text[128];
+            sprintf(new_text, "    sub rsp, %d", aligned_size);
+            free(curr->text);
+            curr->text = strdup(new_text);
+        }
+        curr = curr->next_i;
+    }
 }
 
 /* Load Literal - Lazy evaluation */
@@ -114,15 +152,14 @@ char *gen_ldc(char *value, ParType *out_type)
     if (strchr(value, '.') != NULL) {
         *out_type = type_real;
         char buf[64];
-        if (float_constant_count < MAX_FLOAT_CONSTANTS) {
-            float_constants[float_constant_count] = strdup(value);
-            sprintf(buf, "[flt_const_%d]", float_constant_count);
-            float_constant_count++;
-            return strdup(buf);
-        } else {
-            fprintf(stderr, "Error: Max float constants exceeded\n");
-            exit(1);
+        if (float_constant_count >= float_constant_capacity) {
+            float_constant_capacity = float_constant_capacity == 0 ? 16 : float_constant_capacity * 2;
+            float_constants = realloc(float_constants, float_constant_capacity * sizeof(char *));
         }
+        float_constants[float_constant_count] = strdup(value);
+        sprintf(buf, "[flt_const_%d]", float_constant_count);
+        float_constant_count++;
+        return strdup(buf);
     } else {
         *out_type = type_integer;
         return strdup(value);
@@ -142,20 +179,6 @@ char *gen_lod(char *name, ParType *out_type)
     *out_type = lookup_type(symbolTable, name);
     int pos = lookup_position(symbolTable, name);
     return gen_tmp(pos);
-}
-
-/* Spill Accumulator into Temporary Stack Offset */
-void gen_sav(ParType expType, int tempPosition)
-{
-    char instruction[256];
-    if (expType == type_integer) {
-        sprintf(instruction, "    mov [rbp - %d], rax", tempPosition * 8);
-    } else if (expType == type_real) {
-        sprintf(instruction, "    movsd [rbp - %d], xmm0", tempPosition * 8);
-    } else {
-        return;
-    }
-    addInstruction(instruction, NO_LABEL);
 }
 
 /* Store expression into variable with coercion & redundancy filtering */
@@ -237,10 +260,15 @@ char *gen_op(char *op, char *place1, ParType type1, char *place2, ParType type2,
     if (type1 == type_integer && type2 == type_integer) {
         *out_type = type_integer;
         
-        // If RHS is in rax, copy it to rbx first to avoid being overwritten by LHS load
+        if (strcmp(place1, "%stack%") == 0) {
+            addInstruction("    pop rbx", NO_LABEL);
+            place1 = "rbx";
+        }
+        
+        // If RHS is in rax, copy it to rdx first to avoid being overwritten by LHS load
         if (strcmp(place2, "rax") == 0) {
-            addInstruction("    mov rbx, rax", NO_LABEL);
-            place2 = "rbx";
+            addInstruction("    mov rdx, rax", NO_LABEL);
+            place2 = "rdx";
         }
         
         if (strcmp(place1, "rax") != 0) {
@@ -266,13 +294,18 @@ char *gen_op(char *op, char *place1, ParType type1, char *place2, ParType type2,
         return "rax";
         
     } else {
-        // At least one is real -> Floating Point Math (using xmm registers)
         *out_type = type_real;
         
-        // If RHS is in xmm0, copy it to xmm1 first to avoid being overwritten by LHS load
+        if (strcmp(place1, "%stack%") == 0) {
+            addInstruction("    movsd xmm1, [rsp]", NO_LABEL);
+            addInstruction("    add rsp, 8", NO_LABEL);
+            place1 = "xmm1";
+        }
+        
+        // If RHS is in xmm0, copy it to xmm2 first to avoid being overwritten by LHS load
         if (strcmp(place2, "xmm0") == 0) {
-            addInstruction("    movsd xmm1, xmm0", NO_LABEL);
-            place2 = "xmm1";
+            addInstruction("    movsd xmm2, xmm0", NO_LABEL);
+            place2 = "xmm2";
         }
         
         // Load LHS
@@ -286,13 +319,16 @@ char *gen_op(char *op, char *place1, ParType type1, char *place2, ParType type2,
         }
         
         // Load RHS
-        if (type2 == type_real) {
-            if (strcmp(place2, "xmm1") != 0) { // If place2 was not copied to xmm1
+        if (strcmp(place2, "xmm2") == 0) {
+            addInstruction("    movsd xmm1, xmm2", NO_LABEL);
+            place2 = "xmm1";
+        } else {
+            if (type2 == type_real) {
                 sprintf(buf, "    movsd xmm1, %s", place2);
                 addInstruction(buf, NO_LABEL);
+            } else {
+                gen_cvtsi2sd("xmm1", place2);
             }
-        } else {
-            gen_cvtsi2sd("xmm1", place2);
         }
         
         // Execute operation
@@ -322,7 +358,6 @@ char *gen_inc(char *name, int is_pre, ParType *out_type)
     
     ParType type = lookup_type(symbolTable, name);
     int pos = lookup_position(symbolTable, name);
-    int temp = gen_nxt();
     char buf[256];
     
     if (type != type_integer) {
@@ -333,31 +368,24 @@ char *gen_inc(char *name, int is_pre, ParType *out_type)
     *out_type = type_integer;
     
     if (is_pre) {
-        // Pre-increment
         sprintf(buf, "    add qword [rbp - %d], 1", pos * 8);
         addInstruction(buf, NO_LABEL);
         sprintf(buf, "    mov rax, [rbp - %d]", pos * 8);
         addInstruction(buf, NO_LABEL);
-        sprintf(buf, "    mov [rbp - %d], rax", temp * 8);
-        addInstruction(buf, NO_LABEL);
     } else {
-        // Post-increment
         sprintf(buf, "    mov rax, [rbp - %d]", pos * 8);
-        addInstruction(buf, NO_LABEL);
-        sprintf(buf, "    mov [rbp - %d], rax", temp * 8);
         addInstruction(buf, NO_LABEL);
         sprintf(buf, "    add qword [rbp - %d], 1", pos * 8);
         addInstruction(buf, NO_LABEL);
     }
     
-    return gen_tmp(temp);
+    return "rax";
 }
 
 /* Ternary Conditional Expressions */
 char *gen_cnd(RelationType rel, char *place1, ParType type1, char *place2, ParType type2,
               char *place3, ParType type3, char *place4, ParType type4, ParType *out_type)
 {
-    int temp = gen_nxt();
     int true_lbl = Label();
     int false_lbl = Label();
     int end_lbl = Label();
@@ -368,9 +396,16 @@ char *gen_cnd(RelationType rel, char *place1, ParType type1, char *place2, ParTy
         exit(1);
     }
     
+    if (strcmp(place1, "%stack%") == 0) {
+        addInstruction("    pop rbx", NO_LABEL);
+        place1 = "rbx";
+    }
+    
     // Perform comparison
-    sprintf(buf, "    mov rax, %s", place1);
-    addInstruction(buf, NO_LABEL);
+    if (strcmp(place1, "rax") != 0) {
+        sprintf(buf, "    mov rax, %s", place1);
+        addInstruction(buf, NO_LABEL);
+    }
     sprintf(buf, "    cmp rax, %s", place2);
     addInstruction(buf, NO_LABEL);
     
@@ -398,8 +433,6 @@ char *gen_cnd(RelationType rel, char *place1, ParType type1, char *place2, ParTy
             sprintf(buf, "    mov rax, %s", place3);
             addInstruction(buf, NO_LABEL);
         }
-        sprintf(buf, "    mov [rbp - %d], rax", temp * 8);
-        addInstruction(buf, NO_LABEL);
     } else {
         if (type3 == type_real) {
             if (strcmp(place3, "xmm0") != 0) {
@@ -409,8 +442,6 @@ char *gen_cnd(RelationType rel, char *place1, ParType type1, char *place2, ParTy
         } else {
             gen_cvtsi2sd("xmm0", place3);
         }
-        sprintf(buf, "    movsd [rbp - %d], xmm0", temp * 8);
-        addInstruction(buf, NO_LABEL);
     }
     sprintf(buf, "    jmp _lbl_%d", end_lbl);
     addInstruction(buf, NO_LABEL);
@@ -422,8 +453,6 @@ char *gen_cnd(RelationType rel, char *place1, ParType type1, char *place2, ParTy
             sprintf(buf, "    mov rax, %s", place4);
             addInstruction(buf, NO_LABEL);
         }
-        sprintf(buf, "    mov [rbp - %d], rax", temp * 8);
-        addInstruction(buf, NO_LABEL);
     } else {
         if (type4 == type_real) {
             if (strcmp(place4, "xmm0") != 0) {
@@ -433,20 +462,14 @@ char *gen_cnd(RelationType rel, char *place1, ParType type1, char *place2, ParTy
         } else {
             gen_cvtsi2sd("xmm0", place4);
         }
-        sprintf(buf, "    movsd [rbp - %d], xmm0", temp * 8);
-        addInstruction(buf, NO_LABEL);
     }
     
     // End block
     insertLabel(end_lbl);
     
     if (*out_type == type_integer) {
-        sprintf(buf, "    mov rax, [rbp - %d]", temp * 8);
-        addInstruction(buf, NO_LABEL);
         return "rax";
     } else {
-        sprintf(buf, "    movsd xmm0, [rbp - %d]", temp * 8);
-        addInstruction(buf, NO_LABEL);
         return "xmm0";
     }
 }

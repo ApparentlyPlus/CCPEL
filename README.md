@@ -33,17 +33,23 @@ The compiler supports an extensionless prefix syntax:
 
 ## The Architecture
 
-- **Frontend**: Flex (`src/lexer.l`) and Bison (`src/parser.y`) perform lexical analysis, AST parsing, syntax analysis and semantic analysis.
+- **Frontend**: Flex (`src/lexer.l`) and Bison (`src/parser.y`) perform lexical analysis, parsing, syntax checks, and semantic type analysis in a single pass.
 
 - **Symbol Table**: Manages variables and resolves positions as `qword` stack frame offsets.
 
-- **Code Generation**:
-  - Direct accumulator-register model (`rax` for integers, `xmm0` for reals).
-  - Floating point operations leverage SSE/SSE2 instructions (`addsd`, `subsd`, `mulsd`, `divsd`, `movsd`).
-  - Automatic `cvtsi2sd` and `cvttsd2si` instruction emission handles dynamic type coercion.
-  - Features immediate-operand checks for NASM, routing literal promotions safely through active registers.
+- **Code Generation & Evaluation Model**:
 
-- **IR Instruction Store**: Streamlined linked list (`add_i`, `prt_i`) backed by SGLIB macros, generating clean 64-bit assembly text.
+  - **Compile Time Stack Construction**: Compiles optimal stack frame frames at compile time. The prologue allocates space exclusively for declared local variables, rounded up to the nearest 16-byte boundary to satisfy System V AMD64 ABI requirements for function calls.
+
+  - **Hardware Stack Expression Evaluation**: Volatile accumulator register contents are dynamically preserved on the CPU's hardware stack via native `push`/`pop` during nested expression evaluations. 
+
+  - **Register Yielding Control Flow**: Statements like ternary conditionals yield values directly inside the accumulator registers (`rax` / `xmm0`) without intermediate memory storage.
+
+  - **SSE Vector Optimization**: Floating-point operations utilize SSE/SSE2 instruction subsets (`addsd`, `subsd`, `mulsd`, `divsd`, `movsd`).
+  
+  - **Type Promotion**: Automatic `cvtsi2sd` and `cvttsd2si` instructions handle coercion between integers and doubles seamlessly.
+
+- **IR Instruction Store**: Streamlined instruction linked list (`add_i`, `prt_i`) backed by SGLIB macros, serializing clean 64-bit assembly text.
 
 ## Build & Test Instructions
 

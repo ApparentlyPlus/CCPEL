@@ -21,14 +21,12 @@ typedef enum {OP_GT, OP_LT, OP_EQ} RelationType;
 // Core functions
 void gen_pre(char *progName);
 void gen_fin();
-void gen_rst();
-int gen_nxt();
 char *gen_tmp(int temp_idx);
+char *gen_push(ParType type, char *place);
 
 // x86 Proper Instruction Generation Helpers
 char *gen_ldc(char *value, ParType *out_type);
 char *gen_lod(char *name, ParType *out_type);
-void gen_sav(ParType expType, int tempPosition);
 void gen_asn(char *name, char *place, ParType expr_type);
 void gen_prt(char *place, ParType expr_type);
 

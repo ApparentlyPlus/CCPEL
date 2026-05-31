@@ -28,6 +28,8 @@ typedef ST_ENTRY_TYPE *ST_TABLE_TYPE;
 
 // Since this needs to change the symbol_table pass a pointer
 int addvar(ST_TABLE_TYPE *symbol_table, char *VariableName,ParType TypeDecl);
+void reset_symtab();
+int get_current_stack_value();
 
 // Accessing the Symbol Table
 int lookup(ST_TABLE_TYPE symbol_table, char *VariableName);
