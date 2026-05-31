@@ -62,96 +62,95 @@ Table symbolTable;
 
 %%
 
-program: "start" T_ID { pre($2); symbolTable = NULL; }
-         stmts "end" { fin(); }
-       ;
+program: "start" T_ID { pre($2); symbolTable = NULL; } stmts "end" { fin(); }
+    ;
 
-stmts: /* empty */
-     | stmts stmt
-     ;
+stmts: /* e */
+    | stmts stmt
+    ;
 
 stmt: '(' T_INT T_ID ')' {
-         if (!add(&symbolTable, $3, type_integer)) {
-             ERR_VAR_DECL($3, ll);
-         }
-      }
+        if (!add(&symbolTable, $3, type_integer)) {
+            ERR_VAR_DECL($3, ll);
+        }
+    }
     | '(' T_FLT T_ID ')' {
-         if (!add(&symbolTable, $3, type_real)) {
-             ERR_VAR_DECL($3, ll);
-         }
-      }
+        if (!add(&symbolTable, $3, type_real)) {
+            ERR_VAR_DECL($3, ll);
+        }
+    }
     | '(' '=' T_ID expr ')' {
-         asn($3, $4.place, $4.type);
-      }
+        asn($3, $4.place, $4.type);
+    }
     | '(' T_PRINT expr ')' {
-         print($3.place, $3.type);
-      }
+        print($3.place, $3.type);
+    }
     ;
 
 expr: T_INTVAL {
-         $$.place = ldc($1, &$$.type);
-      }
+        $$.place = ldc($1, &$$.type);
+    }
     | T_FLTVAL {
-         $$.place = ldc($1, &$$.type);
-      }
+        $$.place = ldc($1, &$$.type);
+    }
     | T_ID {
-         $$.place = lod($1, &$$.type);
-      }
+        $$.place = lod($1, &$$.type);
+    }
     | '+' expr {
-         if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
-             $2.place = push($2.type, $2.place);
-         }
-         $<se>$ = $2;
-      } expr {
-         $$.place = op("+", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
-      }
+        if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
+            $2.place = push($2.type, $2.place);
+        }
+        $<se>$ = $2;
+    } expr {
+        $$.place = op("+", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
+    }
     | '-' expr {
-         if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
-             $2.place = push($2.type, $2.place);
-         }
-         $<se>$ = $2;
-      } expr {
-         $$.place = op("-", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
-      }
+        if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
+            $2.place = push($2.type, $2.place);
+        }
+        $<se>$ = $2;
+    } expr {
+        $$.place = op("-", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
+    }
     | '*' expr {
-         if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
-             $2.place = push($2.type, $2.place);
-         }
-         $<se>$ = $2;
-      } expr {
-         $$.place = op("*", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
-      }
+        if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
+            $2.place = push($2.type, $2.place);
+        }
+        $<se>$ = $2;
+    } expr {
+        $$.place = op("*", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
+    }
     | '/' expr {
-         if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
-             $2.place = push($2.type, $2.place);
-         }
-         $<se>$ = $2;
-      } expr {
-         $$.place = op("/", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
-      }
+        if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
+            $2.place = push($2.type, $2.place);
+        }
+        $<se>$ = $2;
+    } expr {
+        $$.place = op("/", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
+    }
     | '(' expr ')' {
-         $$ = $2;
-      }
+        $$ = $2;
+    }
     | '(' T_ID T_INC ')' {
-         $$.place = inc($2, 0, &$$.type);
-      }
+        $$.place = inc($2, 0, &$$.type);
+    }
     | '(' T_INC T_ID ')' {
-         $$.place = inc($3, 1, &$$.type);
-      }
+        $$.place = inc($3, 1, &$$.type);
+    }
     | '(' relop expr {
-         if (strcmp($3.place, "rax") == 0 || strcmp($3.place, "xmm0") == 0) {
-             $3.place = push($3.type, $3.place);
-         }
-         $<se>$ = $3;
-      } expr '?' expr ':' expr ')' {
-         $$.place = cnd($2, $<se>4.place, $<se>4.type, $5.place, $5.type, $7.place, $7.type, $9.place, $9.type, &$$.type);
-      }
+        if (strcmp($3.place, "rax") == 0 || strcmp($3.place, "xmm0") == 0) {
+            $3.place = push($3.type, $3.place);
+        }
+        $<se>$ = $3;
+    } expr '?' expr ':' expr ')' {
+        $$.place = cnd($2, $<se>4.place, $<se>4.type, $5.place, $5.type, $7.place, $7.type, $9.place, $9.type, &$$.type);
+    }
     ;
 
 relop: '>' { $$ = OP_GT; }
-     | '<' { $$ = OP_LT; }
-     | T_EQ { $$ = OP_EQ; }
-     ;
+    | '<' { $$ = OP_LT; }
+    | T_EQ { $$ = OP_EQ; }
+    ;
 
 %%
 
