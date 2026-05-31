@@ -138,7 +138,7 @@ Use the generated `ccpel` compiler to compile a custom prefix expression languag
 ./ccpel input.cpel output.s
 ```
 
-#### 3. Assemble and Link the Output
+#### Assemble and Link the Output
 To build a native Linux executable from the generated assembly (`.s`):
 1. **Assemble** using NASM to produce an ELF64 object file:
 
