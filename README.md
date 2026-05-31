@@ -155,8 +155,10 @@ To build a native Linux executable from the generated assembly (`.s`):
    ./program
    ```
 
-#### 4. Clean Workspace
+#### Clean Workspace
+
 Clear the compiler builds, intermediate objects, and all generated test assembly/binary artifacts:
+
 ```bash
 make clean
 ```
