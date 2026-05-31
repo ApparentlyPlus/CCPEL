@@ -1,6 +1,9 @@
-# CPEL to x86_64 Transpiler
+# CPEL to x86_64 Assembly Compiler
 
-A minimal compiler backend developed in Flex and Bison that compiles a custom prefix expression language (CPEL) directly to native 64-bit x86 assembly (Intel syntax for NASM) and links it via GCC.
+A minimal compiler backend developed in Flex and Bison that compiles a custom prefix expression language (CPEL) directly to native 64-bit x86 assembly (Intel syntax for NASM) and links it via GCC. 
+
+>[!NOTE]
+>The acronym CCPEL stands for "Compile CPEL".
 
 ## Language Reference
 
