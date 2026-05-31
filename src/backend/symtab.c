@@ -1,4 +1,3 @@
-/* SYMBOL TABLE CODE */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,71 +5,57 @@
 #include "symtab.h"
 #include "codegen.h"
 
-static int current_stack_value = 1;
+static int sv = 1;
 
-void reset_symtab() {
-    current_stack_value = 1;
+void rst() {
+    sv = 1;
 }
 
-int get_current_stack_value() {
-    return current_stack_value;
+int nextPos() {
+    return sv;
 }
 
-/* Adding a Variable entry to the symbol table.
- Returns TRUE (1) if the variable is successfully added
- and FALSE (0) if the variable was already in the symbol table. */
-int addvar(ST_TABLE_TYPE *symbol_table, char *VariableName,ParType TypeDecl)
+int add(Table *t, char *name, ParType type)
 {
-	ST_ENTRY_TYPE *newVar;
-	if (!lookup(*symbol_table,VariableName))
-		{
-		newVar = malloc(sizeof(ST_ENTRY_TYPE));
-		newVar->varname = VariableName;
-		newVar->vartype = TypeDecl;
-		newVar->position = current_stack_value;
-		SGLIB_LIST_ADD(ST_ENTRY_TYPE, *symbol_table, newVar, next_st_var);
-		current_stack_value++;
+	Entry *e;
+	if (!has(*t, name))
+	{
+		e = malloc(sizeof(Entry));
+		e->name = name;
+		e->type = type;
+		e->pos = sv;
+		SGLIB_LIST_ADD(Entry, *t, e, next);
+		sv++;
 		return 1;
-		}
-	else return 0; /* error variable already in Table. */
+	}
+	else return 0;
 }
 
-/* Looking up a symbol (variable) in the symbol table. Returns 0 if symbol was not found. */
-int lookup(ST_TABLE_TYPE symbol_table, char *VariableName){
-	ST_ENTRY_TYPE *var, *result;
-	var = malloc(sizeof(ST_ENTRY_TYPE));
-	var->varname = strdup(VariableName);
-	SGLIB_LIST_FIND_MEMBER(ST_ENTRY_TYPE,symbol_table,var,ST_COMPARATOR,next_st_var, result);
-	free(var);
-   if (result == NULL) {return 0;}
-   else {return 1;}
+int has(Table t, char *name) {
+	Entry *e, *res;
+	e = malloc(sizeof(Entry));
+	e->name = strdup(name);
+	SGLIB_LIST_FIND_MEMBER(Entry, t, e, ST_COMPARATOR, next, res);
+	free(e);
+	return res != NULL;
 }
 
-/* Looking up a symbol type in the symbol table. Returns 0 if symbol was not found.
-type_error is 0 since it is the first symbol in the num type.*/
-
-ParType lookup_type(ST_TABLE_TYPE symbol_table, char *VariableName)
+ParType typeOf(Table t, char *name)
 {
-	ST_ENTRY_TYPE *var, *result;
-	var = malloc(sizeof(ST_ENTRY_TYPE));
-	var->varname = strdup(VariableName);
-	SGLIB_LIST_FIND_MEMBER(ST_ENTRY_TYPE,symbol_table,var,ST_COMPARATOR,next_st_var, result);
-	free(var);
-   if (result == NULL) {return type_error;}
-   else {return result->vartype;}
+	Entry *e, *res;
+	e = malloc(sizeof(Entry));
+	e->name = strdup(name);
+	SGLIB_LIST_FIND_MEMBER(Entry, t, e, ST_COMPARATOR, next, res);
+	free(e);
+	return res == NULL ? type_error : res->type;
 }
 
-/* Looking up a poisition of a variable in the Frame in the symbol table.
-   Returns 0 if the variable was not found, otherwise returns the position. */
-int lookup_position(ST_TABLE_TYPE symbol_table, char *VariableName)
+int posOf(Table t, char *name)
 {
-	ST_ENTRY_TYPE *var, *result;
-	var = malloc(sizeof(ST_ENTRY_TYPE));
-	var->varname = strdup(VariableName);
-	SGLIB_LIST_FIND_MEMBER(ST_ENTRY_TYPE,symbol_table,var,ST_COMPARATOR,next_st_var, result);
-	free(var);
-   	if (result == NULL) {return 0;}
-   	else {return result->position;}
+	Entry *e, *res;
+	e = malloc(sizeof(Entry));
+	e->name = strdup(name);
+	SGLIB_LIST_FIND_MEMBER(Entry, t, e, ST_COMPARATOR, next, res);
+	free(e);
+	return res == NULL ? 0 : res->pos;
 }
-
-/* end of function declarations for variable management */

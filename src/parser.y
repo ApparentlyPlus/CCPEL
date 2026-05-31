@@ -18,7 +18,7 @@ int no_errors = 0;
 #include "symtab.h"
 
 /* Defining the Symbol table. A simple linked list. */
-ST_TABLE_TYPE symbolTable;
+Table symbolTable;
 #include "ir.h"
 
 %}
@@ -53,8 +53,8 @@ ST_TABLE_TYPE symbolTable;
 
 %%
 
-program: "start" T_id { gen_pre($2); symbolTable = NULL; }
-         stmts "end" { gen_fin(); }
+program: "start" T_id { pre($2); symbolTable = NULL; }
+         stmts "end" { fin(); }
        ;
 
 stmts: /* empty */
@@ -62,80 +62,80 @@ stmts: /* empty */
      ;
 
 stmt: '(' T_int_type T_id ')' {
-         if (!addvar(&symbolTable, $3, type_integer)) {
+         if (!add(&symbolTable, $3, type_integer)) {
              ERR_VAR_DECL($3, code_line);
          }
       }
     | '(' T_float_type T_id ')' {
-         if (!addvar(&symbolTable, $3, type_real)) {
+         if (!add(&symbolTable, $3, type_real)) {
              ERR_VAR_DECL($3, code_line);
          }
       }
     | '(' '=' T_id expr ')' {
-         gen_asn($3, $4.place, $4.type);
+         asn($3, $4.place, $4.type);
       }
     | '(' T_print expr ')' {
-         gen_prt($3.place, $3.type);
+         print($3.place, $3.type);
       }
     ;
 
 expr: T_integer {
-         $$.place = gen_ldc($1, &$$.type);
+         $$.place = ldc($1, &$$.type);
       }
     | T_float {
-         $$.place = gen_ldc($1, &$$.type);
+         $$.place = ldc($1, &$$.type);
       }
     | T_id {
-         $$.place = gen_lod($1, &$$.type);
+         $$.place = lod($1, &$$.type);
       }
     | '+' expr {
          if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
-             $2.place = gen_push($2.type, $2.place);
+             $2.place = push($2.type, $2.place);
          }
          $<se>$ = $2;
       } expr {
-         $$.place = gen_op("+", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
+         $$.place = op("+", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
       }
     | '-' expr {
          if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
-             $2.place = gen_push($2.type, $2.place);
+             $2.place = push($2.type, $2.place);
          }
          $<se>$ = $2;
       } expr {
-         $$.place = gen_op("-", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
+         $$.place = op("-", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
       }
     | '*' expr {
          if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
-             $2.place = gen_push($2.type, $2.place);
+             $2.place = push($2.type, $2.place);
          }
          $<se>$ = $2;
       } expr {
-         $$.place = gen_op("*", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
+         $$.place = op("*", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
       }
     | '/' expr {
          if (strcmp($2.place, "rax") == 0 || strcmp($2.place, "xmm0") == 0) {
-             $2.place = gen_push($2.type, $2.place);
+             $2.place = push($2.type, $2.place);
          }
          $<se>$ = $2;
       } expr {
-         $$.place = gen_op("/", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
+         $$.place = op("/", $<se>3.place, $<se>3.type, $4.place, $4.type, &$$.type);
       }
     | '(' expr ')' {
          $$ = $2;
       }
     | '(' T_id T_inc ')' {
-         $$.place = gen_inc($2, 0, &$$.type);
+         $$.place = inc($2, 0, &$$.type);
       }
     | '(' T_inc T_id ')' {
-         $$.place = gen_inc($3, 1, &$$.type);
+         $$.place = inc($3, 1, &$$.type);
       }
     | '(' relop expr {
          if (strcmp($3.place, "rax") == 0 || strcmp($3.place, "xmm0") == 0) {
-             $3.place = gen_push($3.type, $3.place);
+             $3.place = push($3.type, $3.place);
          }
          $<se>$ = $3;
       } expr '?' expr ':' expr ')' {
-         $$.place = gen_cnd($2, $<se>4.place, $<se>4.type, $5.place, $5.type, $7.place, $7.type, $9.place, $9.type, &$$.type);
+         $$.place = cnd($2, $<se>4.place, $<se>4.type, $5.place, $5.type, $7.place, $7.type, $9.place, $9.type, &$$.type);
       }
     ;
 

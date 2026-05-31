@@ -18,7 +18,7 @@ endif
 
 # Compiler & Tool Settings
 CC      := gcc
-CFLAGS  := -Wall -Wextra -Isrc -Isrc/backend -Ibuild
+CFLAGS  := -Wall -Wextra -Isrc -Isrc/backend -Ibuild -O3
 LEX     := flex
 LFLAGS  := -s
 YACC    := bison
