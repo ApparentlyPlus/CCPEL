@@ -1,31 +1,40 @@
+/*
+ * CPEL - Custom Prefix Expression Language 
+ * Parser Implementation using Bison
+ * Author: ApparentlyPlus
+ */
+
 %{
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 // Flex Declarations
-extern int code_line;
+extern int ll;
 extern FILE *yyout;
+
+// Bison Declarations
 int yylex();
 int yyerror(const char *);
-int no_errors = 0;
+int nerr = 0;
 
-/* Error Messages Macros */
-#define ERR_VAR_DECL(VAR, LINE) { fprintf(stderr, "Variable :: %s in code_line %d. ", VAR, LINE); yyerror("Var already defined"); YYERROR; }
+// Error Message Macro
+#define ERR_VAR_DECL(VAR, LINE) { fprintf(stderr, "Variable :: %s in line %d. ", VAR, LINE); yyerror("Var already defined"); YYERROR; }
 
 // Code Generation and Symbol Table Headers
 #include "codegen.h"
 #include "symtab.h"
 
-/* Defining the Symbol table. A simple linked list. */
+// Define the symbol table
 Table symbolTable;
 #include "ir.h"
 
 %}
 
-/* Output informative error messages (bison Option) */
+// Output informative error messages
 %define parse.error verbose
 
+// Define the types of semantic values
 %union {
    char *lexical;
    struct {
@@ -35,25 +44,25 @@ Table symbolTable;
    RelationType relopIndex;
 }
 
-/* Token declarations and their respective types */
-%token T_start "start"
-%token T_end "end"
-%token T_int_type "int"
-%token T_float_type "float"
-%token T_print "print"
-%token T_inc "++"
-%token T_eq "=="
+// Token declarations and their respective types
+%token T_START "start"
+%token T_END "end"
+%token T_INT "int"
+%token T_FLT "float"
+%token T_PRINT "print"
+%token T_INC "++"
+%token T_EQ "=="
 
-%token <lexical> T_id
-%token <lexical> T_integer
-%token <lexical> T_float
+%token <lexical> T_ID
+%token <lexical> T_INTVAL
+%token <lexical> T_FLTVAL
 
 %type <se> expr
 %type <relopIndex> relop
 
 %%
 
-program: "start" T_id { pre($2); symbolTable = NULL; }
+program: "start" T_ID { pre($2); symbolTable = NULL; }
          stmts "end" { fin(); }
        ;
 
@@ -61,31 +70,31 @@ stmts: /* empty */
      | stmts stmt
      ;
 
-stmt: '(' T_int_type T_id ')' {
+stmt: '(' T_INT T_ID ')' {
          if (!add(&symbolTable, $3, type_integer)) {
-             ERR_VAR_DECL($3, code_line);
+             ERR_VAR_DECL($3, ll);
          }
       }
-    | '(' T_float_type T_id ')' {
+    | '(' T_FLT T_ID ')' {
          if (!add(&symbolTable, $3, type_real)) {
-             ERR_VAR_DECL($3, code_line);
+             ERR_VAR_DECL($3, ll);
          }
       }
-    | '(' '=' T_id expr ')' {
+    | '(' '=' T_ID expr ')' {
          asn($3, $4.place, $4.type);
       }
-    | '(' T_print expr ')' {
+    | '(' T_PRINT expr ')' {
          print($3.place, $3.type);
       }
     ;
 
-expr: T_integer {
+expr: T_INTVAL {
          $$.place = ldc($1, &$$.type);
       }
-    | T_float {
+    | T_FLTVAL {
          $$.place = ldc($1, &$$.type);
       }
-    | T_id {
+    | T_ID {
          $$.place = lod($1, &$$.type);
       }
     | '+' expr {
@@ -123,10 +132,10 @@ expr: T_integer {
     | '(' expr ')' {
          $$ = $2;
       }
-    | '(' T_id T_inc ')' {
+    | '(' T_ID T_INC ')' {
          $$.place = inc($2, 0, &$$.type);
       }
-    | '(' T_inc T_id ')' {
+    | '(' T_INC T_ID ')' {
          $$.place = inc($3, 1, &$$.type);
       }
     | '(' relop expr {
@@ -141,26 +150,26 @@ expr: T_integer {
 
 relop: '>' { $$ = OP_GT; }
      | '<' { $$ = OP_LT; }
-     | T_eq { $$ = OP_EQ; }
+     | T_EQ { $$ = OP_EQ; }
      ;
 
 %%
 
-/* The usual yyerror */
+// The usual yyerror
 int yyerror (const char *msg)
 {
-    fprintf(stderr, "ERROR: %s (line %d).\n", msg, code_line);
-    no_errors++;
+    fprintf(stderr, "ERROR: %s (line %d).\n", msg, ll);
+    nerr++;
     return 0;
 }
 
-/* The lexer... */
+// The lexer goes here
 #include "lexer.lex.c"
 
 /* Main */
 int main(int argc, char **argv) {
     FILE *asm_file;
-    ++argv, --argc;  /* skip over program name */
+    ++argv, --argc;  // skip over program name
     if (argc > 0 && (yyin = fopen(argv[0], "r")) == NULL) {
         fprintf(stderr, "File %s NOT FOUND in current directory.\n Using stdin.\n", argv[0]);
         yyin = stdin;
@@ -169,21 +178,21 @@ int main(int argc, char **argv) {
     // Calling the parser
     int result = yyparse();
 
-    if (no_errors > 0) {
-        fprintf(stderr, "Compilation finished with %d error(s).\n", no_errors);
+    if (nerr > 0) {
+        fprintf(stderr, "Compilation finished with %d error(s).\n", nerr);
     } else {
         fprintf(stderr, "Compilation finished successfully with no errors.\n");
     }
     
     // If no errors are found, output assembly
-    if (no_errors == 0) {
+    if (nerr == 0) {
         if (argc > 1) {
             asm_file = fopen(argv[1], "w");
         } else {
             fprintf(stderr, "No second argument defined. Output to screen.\n\n");
             asm_file = stdout;
         }
-        print_int_code(asm_file);
+        printIntCode(asm_file);
         fclose(asm_file);
     } else {
         fprintf(stderr, "No Code Generated.\n");

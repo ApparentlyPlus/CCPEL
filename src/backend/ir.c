@@ -1,3 +1,8 @@
+/*
+ * CCPEL - Intermediate Representation Implementation
+ * Author: ApparentlyPlus
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -5,9 +10,13 @@
 #include "sglib.h"
 #include "ir.h"
 
+// INTERCODE is the head of the linked list representing the IR instruction stream
 InstrTable INTERCODE = NULL;
+
+// curN is the next available instruction number for IR generation
 static int curN = 10;
 
+// Adds a new instruction to the IR stream with the given text and label
 void addI(char *text, int lbl)
 {
     Instr *i = malloc(sizeof(Instr));
@@ -18,6 +27,7 @@ void addI(char *text, int lbl)
     SGLIB_LIST_ADD(Instr, INTERCODE, i, next);
 }
 
+// Prints the IR instruction stream to the given output file, reversing the list to maintain original order
 void prtI(FILE *out)
 {
     Instr *p __attribute__((unused));

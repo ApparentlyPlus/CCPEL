@@ -1,12 +1,13 @@
 /*
-Grammar with semantics and type checking.
-Lexical Analyser
-*/
+ * CPEL - Custom Prefix Expression Language 
+ * Lexer Implementation using Flex
+ * Author: ApparentlyPlus
+ */
 
 %{
 #include <stdlib.h>
 #include <string.h>
-int code_line = 1;
+int ll = 1;
 %}
 
 %option yylineno
@@ -23,14 +24,14 @@ newline \n|\x0A|\x0D\x0A
 
 %%
 
-"start"         { return T_start; }
-"end"           { return T_end; }
-"int"           { return T_int_type; }
-"float"         { return T_float_type; }
-"print"         { return T_print; }
+"start"         { return T_START; }
+"end"           { return T_END; }
+"int"           { return T_INT; }
+"float"         { return T_FLT; }
+"print"         { return T_PRINT; }
 
-"++"            { return T_inc; }
-"=="            { return T_eq; }
+"++"            { return T_INC; }
+"=="            { return T_EQ; }
 "+"             { return '+'; }
 "-"             { return '-'; }
 "*"             { return '*'; }
@@ -44,12 +45,12 @@ newline \n|\x0A|\x0D\x0A
 "("             { return '('; }
 ")"             { return ')'; }
 
-{VARIABLE}      { yylval.lexical = strdup(yytext); return T_id; }
-{FLOAT}         { yylval.lexical = strdup(yytext); return T_float; }
-{INTEGER}       { yylval.lexical = strdup(yytext); return T_integer; }
+{VARIABLE}      { yylval.lexical = strdup(yytext); return T_ID; }
+{FLOAT}         { yylval.lexical = strdup(yytext); return T_FLTVAL; }
+{INTEGER}       { yylval.lexical = strdup(yytext); return T_INTVAL; }
 
-{newline}       { code_line++; }
+{newline}       { ll++; }
 [ \t]           { /* nothing */ }
-.               { printf("Lexical Analysis: Unexpected String! :: (%s) in line %d. \n", yytext, code_line); }
+.               { printf("Lexical Analysis: Unexpected String! :: (%s) in line %d. \n", yytext, ll); }
 
 %%

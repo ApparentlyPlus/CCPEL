@@ -1,3 +1,8 @@
+/*
+ * CCPEL - Symbol Table Header
+ * Author: ApparentlyPlus
+ */
+
 #ifndef _symbol_table_h
 #define _symbol_table_h
 

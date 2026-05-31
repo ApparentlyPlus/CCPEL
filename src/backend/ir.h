@@ -1,3 +1,8 @@
+/*
+ * CCPEL - Intermediate Representation Header
+ * Author: ApparentlyPlus
+ */
+
 #ifndef _IR_H
 #define _IR_H
 
@@ -18,6 +23,6 @@ void addI(char *text, int lbl);
 void prtI(FILE *out);
 
 #define addInstruction(txt, lbl) addI(txt, lbl)
-#define print_int_code(str) prtI(str)
+#define printIntCode(str) prtI(str)
 
 #endif

@@ -1,18 +1,32 @@
+/*
+ * CCPEL - Code Generation Implementation
+ * Author: ApparentlyPlus
+ */
+
 #include "codegen.h"
 #include "ir.h"
 #include "symtab.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+// Externs for bison integration
 extern FILE *yyout;
 extern int yyerror(const char *);
 extern Table symbolTable;
 
-static char **fc = NULL;     // dynamic float constants array
-static int fcc = 0;          // count of float constants
-static int fcap = 0;         // capacity of float constants array
-static int lbl = 1;          // jump label counter
+// float constants array
+static char **fc = NULL; 
+
+// count of float constants
+static int fcc = 0; 
+
+// capacity of float constants array
+static int fcap = 0;
+
+// jump label counter
+static int lbl = 1;
 
 // Returns format string for variable stack offset
 char *tmp(int idx)
@@ -22,7 +36,7 @@ char *tmp(int idx)
     return strdup(buf);
 }
 
-// Pushes volatile register values onto hardware stack
+// Pushes volatile register values onto stack
 char *push(ParType type, char *place)
 {
     char buf[256];
@@ -130,6 +144,7 @@ void fin()
     int sz = ((bytes + 15) / 16) * 16;
     if (sz < 16) sz = 16;
     
+    // Patch the stack size placeholder in the instruction stream with the actual calculated size
     extern InstrTable INTERCODE;
     Instr *curr = INTERCODE;
     while (curr != NULL) {
