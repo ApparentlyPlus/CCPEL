@@ -1,0 +1,8 @@
+start test4
+(float y)
+(= y 10.5)
+(print y)
+(int x)
+(= x (+ 3 4))
+(print x)
+end

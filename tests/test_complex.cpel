@@ -1,0 +1,27 @@
+start complex
+(int a)
+(int b)
+(int c)
+(float x)
+(float y)
+(float z)
+
+(= a 3)
+(= b 7)
+(= x 4.5)
+(= y 2.0)
+
+(= z (+ x (* y (- (b++) a))))
+
+(= z (> a b ? (* x y) : (== a 3 ? 15.5 : 42.0)))
+
+(= c (/ (* (++ a) b) 2))
+
+(= y (* x (== c 14 ? 3.0 : 1.5)))
+
+(print a)
+(print b)
+(print c)
+(print z)
+(print y)
+end

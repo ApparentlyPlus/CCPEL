@@ -1,0 +1,6 @@
+start error2
+(int x)
+(= + x 1.0)
+(= x 1)
+(print x)
+end

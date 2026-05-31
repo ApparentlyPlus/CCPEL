@@ -1,0 +1,4 @@
+build/*
+tests/asm/*
+tests/obj/*
+tests/bin/*

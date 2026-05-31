@@ -1,0 +1,7 @@
+start test5
+(float y)
+(int x)
+(= y 10.5)
+(= x (+ 4 y))
+(print x)
+end

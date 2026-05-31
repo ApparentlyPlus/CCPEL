@@ -1,0 +1,13 @@
+start test6
+(int x)
+(int y)
+(int z)
+
+(= x 3)
+(= y (x++))
+(print y)
+(= z (++x))
+(print z)
+(print x)
+
+end

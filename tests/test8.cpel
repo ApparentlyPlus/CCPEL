@@ -1,0 +1,7 @@
+start test8
+(int x)
+(int y) 
+(= y 8)
+(= x ( <  y 10  ?  13  :  23))
+(print x)
+end
