@@ -58,7 +58,7 @@ test: ccpel $(TEST_BINS)
 	@echo ""
 	@for t in $(TESTS); do \
 		echo "Running test: $$t"; \
-		./tests/bin/$$t; \
+		./tests/bin/$$t || exit 1; \
 		echo ""; \
 	done
 	@echo "All tests executed successfully."
