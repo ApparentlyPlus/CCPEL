@@ -122,19 +122,44 @@ Uses nested ternary expressions evaluating directly inside register accumulators
 ### Prerequisites
 The build system requires `nasm` and `gcc` installed on a Linux host.
 
-### Build Commands
-- **Build Compiler**:
+### Build & Run Commands
 
-  ```bash
-  make
-  ```
+#### Compile
 
-- **Clean Workspace**:
-  Clears compiler builds, intermediate objects, and all generated test assembly/binary artifacts.
+Building the project produces the `ccpel` executable directly in the 
+root directory:
+```bash
+make
+```
 
-  ```bash
-  make clean
-  ```
+#### Run the CCPEL Compiler
+Use the generated `ccpel` compiler to compile a custom prefix expression language source file (`.cpel`) into native x86_64 assembly (`.s`):
+```bash
+./ccpel input.cpel output.s
+```
+
+#### 3. Assemble and Link the Output
+To build a native Linux executable from the generated assembly (`.s`):
+1. **Assemble** using NASM to produce an ELF64 object file:
+
+   ```bash
+   nasm -f elf64 -o output.o output.s
+   ```
+2. **Link** using GCC (with `-no-pie`) to create the final executable:
+
+   ```bash
+   gcc -no-pie -o program output.o
+   ```
+3. **Execute** the compiled binary:
+   ```bash
+   ./program
+   ```
+
+#### 4. Clean Workspace
+Clear the compiler builds, intermediate objects, and all generated test assembly/binary artifacts:
+```bash
+make clean
+```
 
 ### Dynamic Test Suite
 Runs incremental compilation and execution for all test cases.
