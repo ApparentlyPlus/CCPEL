@@ -1,6 +1,10 @@
 # CPEL to x86_64 Assembly Compiler
 
-A minimal compiler backend developed in Flex and Bison that compiles a custom prefix expression language (CPEL) directly to native 64-bit x86 assembly (Intel syntax for NASM) and links it via GCC. 
+[![CCPEL Tests](https://github.com/ApparentlyPlus/CCPEL/actions/workflows/ci.yml/badge.svg)](https://github.com/ApparentlyPlus/CCPEL/actions/workflows/ci.yml)
+
+A minimal compiler backend developed in Flex and Bison that compiles a custom prefix expression language (CPEL) directly to native 64-bit x86 assembly (Intel syntax for NASM) and links it via GCC.
+
+This was originally a university assignment targeting a JVM backend, but I chose to revisit the project as a fun challenge and build an x86-64 backend instead.
 
 >[!NOTE]
 >The acronym CCPEL stands for "Compile CPEL".
@@ -29,6 +33,68 @@ The compiler supports an extensionless prefix syntax:
 
 - Output:
   - `(print <expr>)` - Outputs values utilizing C's standard `printf` format strings.
+
+### Examples
+
+Here are some complete, working examples demonstrating CCPEL's prefix syntax:
+
+#### 1. Basic Variable Declarations, Arithmetic, and Printing
+
+```lisp
+start basic_program
+(int a)
+(float b)
+
+(= a 5)
+(= b (+ 4.5 (* a 2.0)))
+
+(print a)
+(print b)
+end
+```
+
+This example declares an integer `a` and a float `b`. `a` is assigned `5`, and `b` is assigned `4.5 + (a * 2.0) = 14.50` using prefix operators. Both values are then printed using standard output format strings.
+
+#### 2. Pre and Post Increment Side Effects
+
+```lisp
+start increment_demo
+(int x)
+(int y)
+(int z)
+
+(= x 3)
+(= y (x++))
+(= z (++x))
+
+(print y)
+(print z)
+(print x)
+end
+```
+
+Demonstrates how side effects are resolved. `y` is assigned the current value of `x` (`3`) before `x` increments to `4` (post-increment). Then, `x` is incremented to `5` before its value is evaluated and assigned to `z` (`5`) (pre-increment).
+
+#### 3. Ternary Conditionals with Relational Operators
+
+```lisp
+start ternary_demo
+(int a)
+(int b)
+(float x)
+(float result)
+
+(= a 3)
+(= b 7)
+(= x 4.5)
+
+(= result (> a b ? (* x 2.0) : (== a 3 ? 15.5 : 42.0)))
+
+(print result)
+end
+```
+
+Uses nested ternary expressions evaluating directly inside register accumulators. Since `(> a b)` (i.e. `3 > 7`) evaluates to false, the second branch `(== a 3 ? 15.5 : 42.0)` is checked. Since `(== a 3)` is true, `result` is assigned `15.5`.
 
 
 ## The Architecture
