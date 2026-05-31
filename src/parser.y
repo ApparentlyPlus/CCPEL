@@ -166,7 +166,7 @@ int yyerror (const char *msg)
 // The lexer goes here
 #include "lexer.lex.c"
 
-/* Main */
+// Entry point of CCPEL
 int main(int argc, char **argv) {
     FILE *asm_file;
     ++argv, --argc;  // skip over program name
